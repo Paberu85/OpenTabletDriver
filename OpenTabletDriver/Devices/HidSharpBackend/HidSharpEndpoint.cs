@@ -14,17 +14,26 @@ namespace OpenTabletDriver.Devices.HidSharpBackend
     public class HidSharpEndpoint : IDeviceEndpoint
     {
         internal HidSharpEndpoint(HidDevice device)
+            : this(device, LinuxRawHidDescriptorInfo.TryCreateFromDevice)
+        {
+        }
+
+        internal HidSharpEndpoint(HidDevice device, Func<string, LinuxRawHidDescriptorInfo> linuxFallbackInfoProvider)
         {
             this.device = device;
+            this.linuxFallbackInfoProvider = linuxFallbackInfoProvider;
         }
 
         private HidDevice device;
+        private readonly Func<string, LinuxRawHidDescriptorInfo> linuxFallbackInfoProvider;
+        private bool linuxFallbackInfoInitialized;
+        private LinuxRawHidDescriptorInfo linuxFallbackInfo;
 
         public int ProductID => device.ProductID;
         public int VendorID => device.VendorID;
-        public int InputReportLength => device.SafeGet(d => d.GetMaxInputReportLength(), -1);
-        public int OutputReportLength => device.SafeGet(d => d.GetMaxOutputReportLength(), -1);
-        public int FeatureReportLength => device.SafeGet(d => d.GetMaxFeatureReportLength(), -1);
+        public int InputReportLength => GetReportLength(d => d.GetMaxInputReportLength(), i => i.InputReportLength);
+        public int OutputReportLength => GetReportLength(d => d.GetMaxOutputReportLength(), i => i.OutputReportLength);
+        public int FeatureReportLength => GetReportLength(d => d.GetMaxFeatureReportLength(), i => i.FeatureReportLength);
 
         public string Manufacturer => device.SafeGet(d => d.GetManufacturer(), "Unknown Manufacturer");
         public string ProductName => device.SafeGet(d => d.GetProductName(), "Unknown Product Name");
@@ -34,8 +43,64 @@ namespace OpenTabletDriver.Devices.HidSharpBackend
         public bool CanOpen => device.SafeGet(d => d.CanOpen, false);
         public IDictionary<string, string> DeviceAttributes => GetDeviceAttributes(DevicePath, () => device.GetReportDescriptor());
 
-        public IDeviceEndpointStream Open() => device.TryOpen(out var stream) ? new HidSharpEndpointStream(stream) : null;
+        public IDeviceEndpointStream Open()
+        {
+            if (device.TryOpen(out var stream))
+                return new HidSharpEndpointStream(stream);
+
+            // Fallback for devices with HID descriptors that HidSharp cannot parse
+            // (e.g. UnitExponent encoded as a signed byte instead of a 4-bit nibble).
+            // The kernel's hidraw interface exposes raw reports without requiring a
+            // parseable descriptor, so we can still read from the device via file I/O.
+            if (TryGetLinuxFallbackInfo(out var fallbackInfo))
+            {
+                try
+                {
+                    var fileSystemName = GetLinuxFileSystemName();
+                    if (!string.IsNullOrWhiteSpace(fileSystemName))
+                        return new LinuxRawHidStream(fileSystemName, fallbackInfo);
+                }
+                catch { }
+            }
+
+            return null;
+        }
         public string GetDeviceString(byte index) => device.GetDeviceString(index);
+
+        // Device matching happens before Open(), so Linux needs a second source of
+        // report-length metadata when HidSharp's descriptor parser throws.
+        private int GetReportLength(Func<HidDevice, int> getter, Func<LinuxRawHidDescriptorInfo, int> fallbackSelector)
+        {
+            if (device.TryGet(getter, out var length))
+                return length;
+
+            return TryGetLinuxFallbackInfo(out var fallbackInfo)
+                ? fallbackSelector(fallbackInfo)
+                : -1;
+        }
+
+        // Cache the raw hidraw descriptor parse so the metadata path and the stream
+        // fallback both operate on the same view of the device's report layout.
+        private bool TryGetLinuxFallbackInfo(out LinuxRawHidDescriptorInfo fallbackInfo)
+        {
+            fallbackInfo = null;
+            if (SystemInterop.CurrentPlatform != PluginPlatform.Linux)
+                return false;
+
+            if (!linuxFallbackInfoInitialized)
+            {
+                var fileSystemName = GetLinuxFileSystemName();
+                linuxFallbackInfo = string.IsNullOrWhiteSpace(fileSystemName)
+                    ? null
+                    : linuxFallbackInfoProvider(fileSystemName);
+                linuxFallbackInfoInitialized = true;
+            }
+
+            fallbackInfo = linuxFallbackInfo;
+            return fallbackInfo != null;
+        }
+
+        private string GetLinuxFileSystemName() => device.SafeGet(d => d.GetFileSystemName(), null);
 
         private static Dictionary<string, string> GetDeviceAttributes(string devicePath, Func<ReportDescriptor> reportDescriptorFunc)
         {
