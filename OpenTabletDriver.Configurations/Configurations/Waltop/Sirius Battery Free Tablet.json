@@ -12,47 +12,97 @@
       "ButtonCount": 2
     },
     "AuxiliaryButtons": {
-      "ButtonCount": 32
+      "ButtonCount": 32,
+      "ButtonNames": [
+        "Left Eraser",
+        "Left Shift",
+        "Left Tab",
+        "Left Alt",
+        "Left Ctrl",
+        "Right Eraser",
+        "Right Shift",
+        "Right Tab",
+        "Right Alt",
+        "Right Ctrl",
+        "V/H Scroll Select",
+        "Zoom/Volume Select",
+        "KB Direction Select",
+        "Dial Subfunction Switch",
+        "Up",
+        "Down",
+        "Left",
+        "Right",
+        "Page Up",
+        "Page Down",
+        "Home",
+        "End",
+        "K1",
+        "K2",
+        "K3",
+        "K4",
+        "K5",
+        "K6",
+        "K7",
+        "K8",
+        "K9",
+        "K10"
+      ]
     },
     "Wheels": [
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Scroll",
+        "Group": "Left Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Scroll",
+        "Group": "Right Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Scroll Aux",
+        "Group": "Left Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Scroll Aux",
+        "Group": "Right Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Multimedia",
+        "Group": "Left Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Multimedia",
+        "Group": "Right Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Multimedia Aux",
+        "Group": "Left Dial",
         "ButtonCount": 0
       },
       {
         "AbsoluteWheelMax": 7,
         "AngleOfZeroReading": 90.0,
+        "Name": "Multimedia Aux",
+        "Group": "Right Dial",
         "ButtonCount": 0
       }
     ]
